@@ -62,11 +62,12 @@ to. Trial limits and plans are described in
 [forbiz.io/llms.txt](https://forbiz.io/llms.txt); the API is documented at
 [forbiz.io/openapi.json](https://forbiz.io/openapi.json).
 
-**Status of the script:** request and response shapes were checked against the OpenAPI
-3.1 document served at version 1.58.0 on 2026-09-21 (`/bootstrap`, `/search`, `/actions`,
-`/actions/{id}`, `/actions/{id}/signal-checks`, `/next`, and the 409
-`COMMITMENT_ALREADY_OPEN` refusal). It has not yet been run end to end against
-production. When it is, the run goes into [RESULTS.md](RESULTS.md) with its exit code.
+**Status of the script:** first run end to end by an external agent on 2026-09-22 against
+API 1.58.0. Session 1 exit 0. **Session 2 exit 1: Forbiz failed check 1.** `GET /search` returned
+zero hits for a commitment key the record demonstrably holds, because the full-text parser
+shatters keys on `/` and `-`. Checks 2 to 7 did not run. The run, the bodies and the open
+defect are in [RESULTS.md](RESULTS.md). The script is unchanged: the test is right, the
+product is not, yet.
 
 ### Run it against anything else
 

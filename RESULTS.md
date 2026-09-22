@@ -11,6 +11,33 @@ fixed, and that is a weaker statement.
 
 ---
 
+## Run 5: the handoff test itself, first end-to-end run (2026-09-22, 02:32 UTC)
+
+**Agent:** a Grok-based agent, run by an external tester. **Script:** `handoff_test.py` from this
+repository, as published. **API:** 1.58.0.
+
+| Session | Result | Detail |
+|---|---|---|
+| Session 1 (`--bootstrap`, record the commitment) | **exit 0** | Opened a trial workspace, recorded one commitment with `commitmentKey`, wrote the handoff file. |
+| Session 2, check 1: recover the commitment by its key through search | **FAIL** | `GET /search?q=handoff-test/20260922-023214` answered 200 with **0 hits** in every collection. The action exists: `/export` of the same workspace lists it, with that exact `commitmentKey`. The full-text query was rewritten as `'handoff-test' <-> 'handoff' <-> 'test' <-> '/20260922-023214'`: the key was shattered on `/` and `-`, and nothing matched. |
+| Session 2, checks 2 to 7 | **BLOCKED** | The script returns after check 1 fails; the other six never ran. |
+| Session 2 overall | **exit 1** | |
+
+**What it means.** A cold successor that holds only the commitment key cannot get past the first
+step through search. The record does hold the key, and it does refuse a duplicate on it
+(`POST /actions` with the same `commitmentKey` answers 409 `COMMITMENT_ALREADY_OPEN` with the
+existing commitment inside), so the commitment is recoverable, but not through the door the
+test uses and a successor would try first. **Open, Forbiz defect.** The tester's first change:
+make `/search` find an exact `commitmentKey`, or stop the full-text parser from shattering keys
+that contain `/` and `-`.
+
+**Also measured in the same run, on the claimed workspace, read-only:** `trial.used.actions = 13`
+(the fix of 1.58.0, confirmed by the third party); `/next` ranks the same four overdue
+commitments that `/prompts` lists under `needs_feedback`, and differs only by one planned item
+not yet due. The "nothing pending while overdue exist" finding of run 4 did not reproduce.
+
+---
+
 ## Run 4: continuity across a claim, and the cold successor (2026-09-20 / 21)
 
 **Agent:** a Grok-based agent, run by an external tester. **Brief:** [BENCHMARK.md](BENCHMARK.md),
