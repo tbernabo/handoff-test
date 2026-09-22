@@ -63,9 +63,9 @@ to. Trial limits and plans are described in
 [forbiz.io/llms.txt](https://forbiz.io/llms.txt); the API is documented at
 [forbiz.io/openapi.json](https://forbiz.io/openapi.json).
 
-**Status of the script:** request and response shapes were checked against the OpenAPI
-3.1 document served at version 1.58.0. External runs, with their exit codes, are listed in
-[RESULTS.md](RESULTS.md).
+**Status of the script:** run end to end by an external agent on 2026-09-22 against API
+1.58.0, on a trial workspace it opened itself: session 1 exit 0, session 2 exit 0, 7 of 7 checks.
+Every external run, with its exit codes, is listed in [RESULTS.md](RESULTS.md).
 
 ### Run it against anything else
 

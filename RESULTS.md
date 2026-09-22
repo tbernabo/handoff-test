@@ -11,6 +11,31 @@ fixed, and that is a weaker statement.
 
 ---
 
+## Run 6: the handoff test, 7 of 7 (2026-09-22, 02:48 UTC)
+
+**Agent:** a Grok-based agent, run by an external tester, on a fresh trial workspace it opened
+itself. **Script:** `handoff_test.py` at commit `7419014` (check 1 through the record's 409).
+**API:** 1.58.0.
+
+| Session | Result |
+|---|---|
+| Session 1 (`--bootstrap`, record the commitment) | **exit 0** |
+| Session 2 (recover from the key alone) | **exit 0, 7 of 7 checks PASS** |
+
+What session 2 saw, in the tester's words: check 1, 409 `COMMITMENT_ALREADY_OPEN` with the
+existing commitment; check 2, state `planned`; check 3, the expected signal and the Friday
+deadline survived; check 4, "one source was checked (email_thread) over 2026-09-21 to
+2026-09-22 and the signal was not there. This says nothing about what the other party did";
+check 5, `/next` carried a handoff; check 6, two commands in the 409 body; check 7, no actual
+signal and no outcome on the record. No FAIL bodies, no traceback.
+
+**Also measured, read-only, on the claimed workspace:** `trial.used.actions = 13`,
+`remaining = 17`; `/next` ranks the same four overdue commitments that `/prompts` lists under
+`needs_feedback`. `/prompts` also catalogs one planned item not yet due, which `/next` does not
+rank. The tester's first change: none.
+
+---
+
 ## Run 5: the handoff test itself, first end-to-end run (2026-09-22, 02:32 UTC)
 
 **Agent:** a Grok-based agent, run by an external tester. **Script:** `handoff_test.py` as first
