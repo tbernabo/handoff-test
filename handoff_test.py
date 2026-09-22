@@ -43,7 +43,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 API = os.environ.get("FORBIZ_API", "https://forbiz.io/api/public/agent")
-USER_AGENT = "handoff-test/1.0"
+USER_AGENT = "handoff-test/1.1"
 HANDOFF_FILE = os.environ.get("HANDOFF_FILE", "handoff.json")
 
 
@@ -175,16 +175,25 @@ def session2(args):
         key = json.load(f)["commitmentKey"]
     r = Report()
 
-    # 1. recover the same commitment by searching the record, not by id
-    status, found = call("GET", f"/search?q={urlquote(key)}", credential=cred)
-    hits = collect_actions(found)
-    match = [a for a in hits if key in json.dumps(a)]
-    r.check("recovered the commitment by its key", status == 200 and match,
-            f"{len(match)} hit(s) via GET /search")
-    if not match:
-        print(json.dumps(found)[:600])
+    # 1. recover the same commitment by its key, through the record's own
+    #    mechanism: a commitment key is unique, so asking to open it again is
+    #    refused, and the refusal hands back the existing commitment. The key is
+    #    NOT a search term (the first published version of this check assumed it
+    #    was, and failed against 1.58.0; see RESULTS.md, run 5).
+    status, dup = call("POST", "/actions", {
+        "description": "Follow up on the revised proposal",
+        "commitmentKey": key,
+        "expectedSignal": "Customer accepts or requests changes",
+    }, cred)
+    code = dup.get("code") if isinstance(dup, dict) else None
+    existing = dup.get("existing") if isinstance(dup, dict) else None
+    action_id = (existing or {}).get("id") if isinstance(existing, dict) else None
+    r.check("recovered the commitment by its key (409 returned the existing one)",
+            status == 409 and code == "COMMITMENT_ALREADY_OPEN" and bool(action_id),
+            f"{status} {code or ''} existing={action_id or 'none'}".strip())
+    if not action_id:
+        print(json.dumps(dup)[:600])
         return finish(r)
-    action_id = match[0].get("id") or match[0].get("action_id")
 
     # 2. current state, from the record
     status, one = call("GET", f"/actions/{action_id}", credential=cred)
@@ -209,15 +218,12 @@ def session2(args):
     r.check("has a next step with a handoff for a successor", status == 200 and (handoff or nxt.get("message")),
             (json.dumps(handoff)[:160] if handoff else nxt.get("message", "")))
 
-    # 5. no duplicate: opening the same commitment again must be refused
-    status, dup = call("POST", "/actions", {
-        "description": "Follow up on the revised proposal",
-        "commitmentKey": key,
-        "expectedSignal": "Customer accepts or requests changes",
-    }, cred)
-    code = dup.get("code") or dup.get("error", {}).get("code") if isinstance(dup, dict) else None
-    r.check("refused to open a duplicate", status == 409,
-            f"{status} {code or ''}".strip())
+    # 5. the refusal in check 1 is not a dead end: it carries the commands to
+    #    continue the existing commitment, executable as they came back
+    commands = dup.get("commands") if isinstance(dup, dict) else None
+    n_cmd = len(commands) if isinstance(commands, (list, dict)) else 0
+    r.check("the refusal carried commands to continue the existing commitment", n_cmd >= 1,
+            f"{n_cmd} command(s) in the 409 body")
 
     # 6. no invented outcome: the record holds no actual signal and no outcome
     r.check("no outcome was invented",

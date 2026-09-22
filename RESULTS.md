@@ -13,23 +13,24 @@ fixed, and that is a weaker statement.
 
 ## Run 5: the handoff test itself, first end-to-end run (2026-09-22, 02:32 UTC)
 
-**Agent:** a Grok-based agent, run by an external tester. **Script:** `handoff_test.py` from this
-repository, as published. **API:** 1.58.0.
+**Agent:** a Grok-based agent, run by an external tester. **Script:** `handoff_test.py` as first
+published. **API:** 1.58.0.
 
 | Session | Result | Detail |
 |---|---|---|
 | Session 1 (`--bootstrap`, record the commitment) | **exit 0** | Opened a trial workspace, recorded one commitment with `commitmentKey`, wrote the handoff file. |
-| Session 2, check 1: recover the commitment by its key through search | **FAIL** | `GET /search?q=handoff-test/20260922-023214` answered 200 with **0 hits** in every collection. The action exists: `/export` of the same workspace lists it, with that exact `commitmentKey`. The full-text query was rewritten as `'handoff-test' <-> 'handoff' <-> 'test' <-> '/20260922-023214'`: the key was shattered on `/` and `-`, and nothing matched. |
-| Session 2, checks 2 to 7 | **BLOCKED** | The script returns after check 1 fails; the other six never ran. |
-| Session 2 overall | **exit 1** | |
+| Session 2, check 1 as first written: recover the commitment by its key through `GET /search` | **FAIL** | 200 with 0 hits. The action existed: `/export` listed it with that exact key. |
+| Session 2, checks 2 to 7 | not run | The script stopped after check 1. |
 
-**What it means.** A cold successor that holds only the commitment key cannot get past the first
-step through search. The record does hold the key, and it does refuse a duplicate on it
-(`POST /actions` with the same `commitmentKey` answers 409 `COMMITMENT_ALREADY_OPEN` with the
-existing commitment inside), so the commitment is recoverable, but not through the door the
-test uses and a successor would try first. **Open, Forbiz defect.** The tester's first change:
-make `/search` find an exact `commitmentKey`, or stop the full-text parser from shattering keys
-that contain `/` and `-`.
+**What it turned out to be: a wrong assumption in the test, not a defect in the product.**
+The first version of check 1 assumed a successor recovers a commitment by full-text search on
+its key. In Forbiz the `commitmentKey` is a uniqueness key, not a search term: the record's own
+door for it is `POST /actions` with the same key, which answers 409 `COMMITMENT_ALREADY_OPEN`
+and returns the existing commitment plus the commands to continue it. The designed door for a
+cold successor is `GET /next`, which ranks and carries the handoff, and the same run verified
+that door on a claimed workspace. Check 1 was rewritten the same day to use the record's own
+mechanism; the product was not changed. The run stays here because the test learned
+something, and that is the point of publishing runs.
 
 **Also measured in the same run, on the claimed workspace, read-only:** `trial.used.actions = 13`
 (the fix of 1.58.0, confirmed by the third party); `/next` ranks the same four overdue

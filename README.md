@@ -24,18 +24,19 @@ It runs as two independent processes, so nothing but the durable record and an
 authorized credential connects them. Session 1 records one commitment with an
 expected signal, its source and a deadline, checks the source once, and writes a
 handoff file that holds only the commitment key. Session 2 starts from that key
-and has to recover everything else.
+and has to recover everything else, using the record's own mechanism: a commitment key is
+unique, so asking to open it again is refused, and the refusal hands back the existing one.
 
 ### What session 2 must show
 
 | # | Check | Why it matters |
 |---|---|---|
-| 1 | Recovers the commitment by its key, through search, not by a stored id | A successor never has the id |
+| 1 | Recovers the commitment by its key: opening it again is refused, and the refusal returns the existing commitment | A successor never has the id; the record's uniqueness is the lookup |
 | 2 | Reads its current state from the record | Not from a summary someone wrote |
 | 3 | The expected signal and deadline survived | Continuity is about what was promised |
 | 4 | Knows what was already checked, and where | "Checked one email thread through Friday" is not "the customer did not reply" |
 | 5 | Gets a next step with a handoff for a successor | The record ranks, the agent does not guess |
-| 6 | Is refused when it opens the same commitment again | No duplicates, enforced by the record |
+| 6 | The refusal carried the commands to continue the existing commitment | A refusal without a next move is a dead end |
 | 7 | No outcome was invented | The record holds no actual signal and no outcome |
 
 Exit code 0 when every check passes.
